@@ -37,7 +37,7 @@ jobs:
 
         make O=out ARCH=arm64 olddefconfig
 
-    - name: Build Kernel (Proton Clang)
+    - name: Build Kernel (Proton Clang, Host GCC)
       run: |
         export PATH=$GITHUB_WORKSPACE/clang/bin:$PATH
 
@@ -57,8 +57,8 @@ jobs:
           OBJDUMP=llvm-objdump \
           STRIP=llvm-strip \
           READELF=llvm-readelf \
-          HOSTAR=llvm-ar \
-          HOSTLD=ld.lld
+          HOSTAR=llvm-ar
+        # Tidak pakai HOSTLD=ld.lld agar tidak konflik dengan libc host
 
     - name: Clone AnyKernel3 & Pack ZIP
       run: |
