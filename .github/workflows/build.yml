@@ -17,39 +17,43 @@ jobs:
         sudo apt-get install -y \
           bc bison flex libssl-dev libncurses5-dev build-essential ccache \
           libelf-dev libudev-dev lzop curl wget zip git \
-          gcc-arm-linux-gnueabi
+          gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi
 
-    - name: Clone Proton Clang (Bundled binutils)
+    - name: Clone Proton Clang
       run: |
         git clone --depth=1 https://github.com/kdrag0n/proton-clang.git clang
 
     - name: Configure Kernel
       run: |
-        export PATH=$GITHUB_WORKSPACE/clang/bin:$PATH
-        make O=out ARCH=arm64 whyred_defconfig
+        export ARCH=arm64
+        export O=out
 
-        # Tambah fitur kernel yang dibutuhkan
-        scripts/config --file out/.config -e CONFIG_USER_NS
-        scripts/config --file out/.config -e CONFIG_NAMESPACES
-        scripts/config --file out/.config -e CONFIG_UIDGID_STRICT_TYPE_CHECKS
-        scripts/config --file out/.config -e CONFIG_DRM
-        scripts/config --file out/.config -e CONFIG_DRM_MSM
+        make O=$O ARCH=$ARCH whyred_defconfig
 
-        make O=out ARCH=arm64 olddefconfig
+        # Tambahkan fitur yang dibutuhkan
+        scripts/config --file $O/.config -e CONFIG_USER_NS
+        scripts/config --file $O/.config -e CONFIG_NAMESPACES
+        scripts/config --file $O/.config -e CONFIG_UIDGID_STRICT_TYPE_CHECKS
+        scripts/config --file $O/.config -e CONFIG_DRM
+        scripts/config --file $O/.config -e CONFIG_DRM_MSM
 
-    - name: Build Kernel (2-pass build: Host then Target)
+        make O=$O ARCH=$ARCH olddefconfig
+
+    - name: Build Scripts (Host Tools)
       run: |
         export ARCH=arm64
         export O=out
-        export CROSS_COMPILE=aarch64-linux-gnu-
-        export CROSS_COMPILE_COMPAT=arm-linux-gnueabi-
-        export CROSS_COMPILE_ARM32=arm-linux-gnueabi-
 
-        # PASS 1: Build host tools (fixdep, dtc) with system linker
-        make -j$(nproc) O=$O ARCH=$ARCH HOSTCC=gcc scripts
+        make O=$O ARCH=$ARCH HOSTCC=gcc scripts
 
-        # PASS 2: Build kernel with Proton Clang
+    - name: Build Kernel (with Proton Clang)
+      run: |
+        export ARCH=arm64
+        export O=out
         export PATH=$GITHUB_WORKSPACE/clang/bin:$PATH
+
+        export CROSS_COMPILE=aarch64-linux-gnu-
+        export CROSS_COMPILE_ARM32=arm-linux-gnueabi-
 
         make -j$(nproc) O=$O ARCH=$ARCH \
           CC=clang \
@@ -63,20 +67,20 @@ jobs:
           READELF=llvm-readelf \
           HOSTAR=llvm-ar
 
-    - name: Clone AnyKernel3 & Pack ZIP
+    - name: Pack Image with AnyKernel3
       run: |
         git clone --depth=1 https://github.com/osm0sis/AnyKernel3
         cp out/arch/arm64/boot/Image.gz-dtb AnyKernel3/
         cd AnyKernel3
         zip -r9 ../Whyred-Kernel.zip *
 
-    - name: Upload Kernel Image
+    - name: Upload Image.gz-dtb
       uses: actions/upload-artifact@v4
       with:
         name: Image.gz-dtb
         path: out/arch/arm64/boot/Image.gz-dtb
 
-    - name: Upload Flashable Kernel ZIP
+    - name: Upload Flashable ZIP
       uses: actions/upload-artifact@v4
       with:
         name: Kernel-ZIP
