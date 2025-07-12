@@ -32,7 +32,7 @@ jobs:
         export PATH=$GITHUB_WORKSPACE/clang/bin:$PATH
         make O=out ARCH=arm64 whyred_defconfig
 
-        # Tambah fitur yang dibutuhkan
+        # Tambah fitur kernel yang dibutuhkan
         scripts/config --file out/.config -e CONFIG_USER_NS
         scripts/config --file out/.config -e CONFIG_NAMESPACES
         scripts/config --file out/.config -e CONFIG_UIDGID_STRICT_TYPE_CHECKS
@@ -41,7 +41,7 @@ jobs:
 
         make O=out ARCH=arm64 olddefconfig
 
-    - name: Build Kernel (Full LLVM)
+    - name: Build Kernel (Clang target + GCC host)
       run: |
         export PATH=$GITHUB_WORKSPACE/clang/bin:$PATH
 
@@ -53,6 +53,7 @@ jobs:
 
         make -j$(nproc) O=$O ARCH=$ARCH \
           CC=clang \
+          HOSTCC=gcc \
           LD=ld.lld \
           AR=llvm-ar \
           NM=llvm-nm \
@@ -60,8 +61,6 @@ jobs:
           OBJDUMP=llvm-objdump \
           STRIP=llvm-strip \
           READELF=llvm-readelf \
-          HOSTCC=clang \
-          HOSTCXX=clang++ \
           HOSTAR=llvm-ar \
           HOSTLD=ld.lld
 
