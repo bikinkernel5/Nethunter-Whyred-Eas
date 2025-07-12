@@ -32,7 +32,7 @@ jobs:
         export PATH=$GITHUB_WORKSPACE/clang/bin:$PATH
         make O=out ARCH=arm64 whyred_defconfig
 
-        # Tambah fitur yang diinginkan
+        # Tambah fitur yang dibutuhkan
         scripts/config --file out/.config -e CONFIG_USER_NS
         scripts/config --file out/.config -e CONFIG_NAMESPACES
         scripts/config --file out/.config -e CONFIG_UIDGID_STRICT_TYPE_CHECKS
@@ -41,7 +41,7 @@ jobs:
 
         make O=out ARCH=arm64 olddefconfig
 
-    - name: Build Kernel
+    - name: Build Kernel (Full LLVM)
       run: |
         export PATH=$GITHUB_WORKSPACE/clang/bin:$PATH
 
@@ -51,7 +51,19 @@ jobs:
         export CROSS_COMPILE_COMPAT=arm-linux-gnueabi-
         export CROSS_COMPILE_ARM32=arm-linux-gnueabi-
 
-        make -j$(nproc) O=$O ARCH=$ARCH CC=clang
+        make -j$(nproc) O=$O ARCH=$ARCH \
+          CC=clang \
+          LD=ld.lld \
+          AR=llvm-ar \
+          NM=llvm-nm \
+          OBJCOPY=llvm-objcopy \
+          OBJDUMP=llvm-objdump \
+          STRIP=llvm-strip \
+          READELF=llvm-readelf \
+          HOSTCC=clang \
+          HOSTCXX=clang++ \
+          HOSTAR=llvm-ar \
+          HOSTLD=ld.lld
 
     - name: Clone AnyKernel3 & Pack ZIP
       run: |
