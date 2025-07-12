@@ -17,7 +17,7 @@ jobs:
         sudo apt-get install -y \
           bc bison flex libssl-dev libncurses5-dev build-essential ccache \
           libelf-dev libudev-dev lzop curl wget zip git \
-          gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi
+          gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf
 
     - name: Clone Proton Clang
       run: |
@@ -30,7 +30,7 @@ jobs:
 
         make O=$O ARCH=$ARCH whyred_defconfig
 
-        # Tambahkan fitur yang dibutuhkan
+        # Aktifkan fitur tambahan (userns, drm, dll)
         scripts/config --file $O/.config -e CONFIG_USER_NS
         scripts/config --file $O/.config -e CONFIG_NAMESPACES
         scripts/config --file $O/.config -e CONFIG_UIDGID_STRICT_TYPE_CHECKS
@@ -46,14 +46,14 @@ jobs:
 
         make O=$O ARCH=$ARCH HOSTCC=gcc scripts
 
-    - name: Build Kernel (with Proton Clang)
+    - name: Build Kernel with Proton Clang
       run: |
         export ARCH=arm64
         export O=out
         export PATH=$GITHUB_WORKSPACE/clang/bin:$PATH
 
         export CROSS_COMPILE=aarch64-linux-gnu-
-        export CROSS_COMPILE_ARM32=arm-linux-gnueabi-
+        export CROSS_COMPILE_ARM32=arm-linux-gnueabihf-
 
         make -j$(nproc) O=$O ARCH=$ARCH \
           CC=clang \
@@ -67,7 +67,7 @@ jobs:
           READELF=llvm-readelf \
           HOSTAR=llvm-ar
 
-    - name: Pack Image with AnyKernel3
+    - name: Clone AnyKernel3 & Pack ZIP
       run: |
         git clone --depth=1 https://github.com/osm0sis/AnyKernel3
         cp out/arch/arm64/boot/Image.gz-dtb AnyKernel3/
