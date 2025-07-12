@@ -17,9 +17,13 @@ jobs:
         sudo apt-get install -y bc bison flex libssl-dev libncurses5-dev \
           git build-essential ccache libelf-dev libudev-dev lzop curl wget zip
 
-    - name: Clone Neutron Clang Toolchain
+    - name: Install Neutron Clang via AntMan
       run: |
-        git clone --depth=1 https://github.com/Neutron-Toolchains/clang.git -b main clang
+        curl -s https://raw.githubusercontent.com/Neutron-Toolchains/antman/main/antman \
+          -o antman && chmod +x antman
+        mkdir clang && cd clang
+        ../antman -S=latest
+        cd ..
 
     - name: Configure Kernel
       run: |
@@ -44,7 +48,7 @@ jobs:
           CROSS_COMPILE=aarch64-linux-gnu- \
           CROSS_COMPILE_COMPAT=arm-linux-gnueabi-
 
-    - name: Clone AnyKernel3 & Pack Flashable ZIP
+    - name: Clone AnyKernel3 & Pack ZIP
       run: |
         git clone --depth=1 https://github.com/osm0sis/AnyKernel3
         cp out/arch/arm64/boot/Image.gz-dtb AnyKernel3/
