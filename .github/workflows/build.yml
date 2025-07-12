@@ -19,13 +19,9 @@ jobs:
           libelf-dev libudev-dev lzop curl wget zip git \
           gcc-arm-linux-gnueabi
 
-    - name: Install Neutron Clang via AntMan
+    - name: Clone Proton Clang (Bundled binutils)
       run: |
-        curl -s https://raw.githubusercontent.com/Neutron-Toolchains/antman/main/antman \
-          -o antman && chmod +x antman
-        mkdir clang && cd clang
-        ../antman -S=latest
-        cd ..
+        git clone --depth=1 https://github.com/kdrag0n/proton-clang.git clang
 
     - name: Configure Kernel
       run: |
@@ -41,7 +37,7 @@ jobs:
 
         make O=out ARCH=arm64 olddefconfig
 
-    - name: Build Kernel (Clang target + GCC host)
+    - name: Build Kernel (Proton Clang)
       run: |
         export PATH=$GITHUB_WORKSPACE/clang/bin:$PATH
 
