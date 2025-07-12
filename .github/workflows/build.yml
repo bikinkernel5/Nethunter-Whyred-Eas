@@ -1,0 +1,49 @@
+name: Build Kernel Whyred
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Source
+      uses: actions/checkout@v3
+
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y bc bison flex libssl-dev make libc6-dev libncurses5-dev git ccache
+
+    - name: Clone Clang Toolchain
+      run: |
+        git clone --depth=1 https://github.com/ClangBuiltLinux/clang-built-linux clang
+
+    - name: Set up Defconfig + Patch USER_NS & DRM
+      run: |
+        export PATH=$GITHUB_WORKSPACE/clang/bin:$PATH
+        make O=out ARCH=arm64 whyred_defconfig
+
+        # Aktifkan config tambahan
+        scripts/config --file out/.config -e CONFIG_USER_NS
+        scripts/config --file out/.config -e CONFIG_NAMESPACES
+        scripts/config --file out/.config -e CONFIG_DRM
+        scripts/config --file out/.config -e CONFIG_DRM_MSM
+        scripts/config --file out/.config -e CONFIG_UIDGID_STRICT_TYPE_CHECKS
+
+        make O=out ARCH=arm64 olddefconfig
+
+    - name: Compile Kernel
+      run: |
+        export PATH=$GITHUB_WORKSPACE/clang/bin:$PATH
+        make -j$(nproc) O=out \
+          ARCH=arm64 \
+          CC=clang \
+          CROSS_COMPILE=aarch64-linux-gnu-
+
+    - name: Upload Image.gz-dtb
+      uses: actions/upload-artifact@v3
+      with:
+        name: Image.gz-dtb
+        path: out/arch/arm64/boot/Image.gz-dtb
