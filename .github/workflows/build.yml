@@ -1,4 +1,4 @@
-name: Build Kernel Whyred
+name: Build Whyred Kernel
 
 on:
   workflow_dispatch:
@@ -8,42 +8,57 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Source
+    - name: Checkout Kernel Source
       uses: actions/checkout@v4
 
     - name: Install Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y bc bison flex libssl-dev make libc6-dev libncurses5-dev git ccache
+        sudo apt-get install -y bc bison flex libssl-dev libncurses5-dev \
+          git build-essential ccache libelf-dev libudev-dev lzop curl wget zip
 
-    - name: Clone Clang Toolchain
+    - name: Clone Neutron Clang Toolchain
       run: |
-        git clone --depth=1 https://github.com/ClangBuiltLinux/clang-built-linux clang
+        git clone --depth=1 https://github.com/Neutron-Toolchains/clang.git -b main clang
 
-    - name: Set up Defconfig + Patch USER_NS & DRM
+    - name: Configure Kernel
       run: |
         export PATH=$GITHUB_WORKSPACE/clang/bin:$PATH
         make O=out ARCH=arm64 whyred_defconfig
 
-        # Aktifkan config tambahan
+        # Aktifkan fitur tambahan
         scripts/config --file out/.config -e CONFIG_USER_NS
         scripts/config --file out/.config -e CONFIG_NAMESPACES
+        scripts/config --file out/.config -e CONFIG_UIDGID_STRICT_TYPE_CHECKS
         scripts/config --file out/.config -e CONFIG_DRM
         scripts/config --file out/.config -e CONFIG_DRM_MSM
-        scripts/config --file out/.config -e CONFIG_UIDGID_STRICT_TYPE_CHECKS
 
         make O=out ARCH=arm64 olddefconfig
 
-    - name: Compile Kernel
+    - name: Build Kernel
       run: |
         export PATH=$GITHUB_WORKSPACE/clang/bin:$PATH
         make -j$(nproc) O=out \
           ARCH=arm64 \
           CC=clang \
-          CROSS_COMPILE=aarch64-linux-gnu-
+          CROSS_COMPILE=aarch64-linux-gnu- \
+          CROSS_COMPILE_COMPAT=arm-linux-gnueabi-
 
-    - name: Upload Image.gz-dtb
+    - name: Clone AnyKernel3 & Pack Flashable ZIP
+      run: |
+        git clone --depth=1 https://github.com/osm0sis/AnyKernel3
+        cp out/arch/arm64/boot/Image.gz-dtb AnyKernel3/
+        cd AnyKernel3
+        zip -r9 ../Whyred-Kernel.zip *
+
+    - name: Upload Kernel Image
       uses: actions/upload-artifact@v4
       with:
         name: Image.gz-dtb
         path: out/arch/arm64/boot/Image.gz-dtb
+
+    - name: Upload Flashable Kernel ZIP
+      uses: actions/upload-artifact@v4
+      with:
+        name: Kernel-ZIP
+        path: Whyred-Kernel.zip
