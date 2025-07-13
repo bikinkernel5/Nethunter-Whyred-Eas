@@ -21,7 +21,7 @@ jobs:
     - name: Clone Proton Clang
       run: git clone --depth=1 https://github.com/kdrag0n/proton-clang.git clang
 
-    - name: Clone ARM32 Toolchain (Android Compatible)
+    - name: Clone Android ARM32 Toolchain
       run: git clone --depth=1 https://github.com/arter97/arm32-gcc.git arm32
 
     - name: Configure Kernel
@@ -30,7 +30,7 @@ jobs:
         export O=out
         make O=$O ARCH=$ARCH whyred_defconfig
 
-        # Aktifkan fitur-fitur penting
+        # Aktifkan fitur penting
         scripts/config --file $O/.config -e CONFIG_USER_NS
         scripts/config --file $O/.config -e CONFIG_NAMESPACES
         scripts/config --file $O/.config -e CONFIG_UIDGID_STRICT_TYPE_CHECKS
@@ -39,16 +39,15 @@ jobs:
         scripts/config --file $O/.config -e CONFIG_TMPFS
         scripts/config --file $O/.config -e CONFIG_SHMEM
         scripts/config --file $O/.config -e CONFIG_ANDROID_PARANOID_NETWORK
-
+        scripts/config --file $O/.config -e CONFIG_PID_NS
+        scripts/config --file $O/.config -e CONFIG_NET_NS
+        scripts/config --file $O/.config -e CONFIG_UTS_NS
+        scripts/config --file $O/.config -e CONFIG_CGROUPS
+        scripts/config --file $O/.config -e CONFIG_IPC_NS
+        scripts/config --file $O/.config -e CONFIG_FB
         make O=$O ARCH=$ARCH olddefconfig
 
-    - name: Build Scripts (Host Tools)
-      run: |
-        export ARCH=arm64
-        export O=out
-        make O=$O ARCH=$ARCH HOSTCC=gcc scripts
-
-    - name: Build Kernel with Proton Clang
+    - name: Build Kernel
       run: |
         export ARCH=arm64
         export O=out
