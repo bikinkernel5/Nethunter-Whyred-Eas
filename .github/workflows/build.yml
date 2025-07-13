@@ -17,7 +17,7 @@ jobs:
         sudo apt-get install -y \
           bc bison flex libssl-dev libncurses5-dev build-essential ccache \
           libelf-dev libudev-dev lzop curl wget zip git \
-          gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf binutils
+          gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf
 
     - name: Clone Proton Clang
       run: |
@@ -30,27 +30,20 @@ jobs:
 
         make O=$O ARCH=$ARCH whyred_defconfig
 
-        # Aktifkan fitur tambahan (userns, drm, dll)
+        # Aktifkan fitur tambahan
         scripts/config --file $O/.config -e CONFIG_USER_NS
         scripts/config --file $O/.config -e CONFIG_NAMESPACES
         scripts/config --file $O/.config -e CONFIG_UIDGID_STRICT_TYPE_CHECKS
         scripts/config --file $O/.config -e CONFIG_DRM
         scripts/config --file $O/.config -e CONFIG_DRM_MSM
-        scripts/config --file $O/.config -e CONFIG_PID_NS
-        scripts/config --file $O/.config -e CONFIG_NET_NS
-        scripts/config --file $O/.config -e CONFIG_IPC_NS
-        scripts/config --file $O/.config -e CONFIG_UTS_NS
-        scripts/config --file $O/.config -e CONFIG_TMPFS
-        scripts/config --file $O/.config -e CONFIG_SHMEM
-        scripts/config --file $O/.config -e CONFIG_FB
 
         make O=$O ARCH=$ARCH olddefconfig
 
-    - name: Build Host Tools (fixdep etc)
+    - name: Build Host Tools (fixdep, conf)
       run: |
         export ARCH=arm64
         export O=out
-        export LD=/usr/bin/ld
+        export PATH=/usr/bin:$PATH   # ⚠️ Pastikan ld/gcc sistem dipakai
         make O=$O ARCH=$ARCH HOSTCC=gcc scripts
 
     - name: Build Kernel with Proton Clang
@@ -58,6 +51,7 @@ jobs:
         export ARCH=arm64
         export O=out
         export PATH=$GITHUB_WORKSPACE/clang/bin:$PATH
+
         export CROSS_COMPILE=aarch64-linux-gnu-
         export CROSS_COMPILE_ARM32=arm-linux-gnueabihf-
 
