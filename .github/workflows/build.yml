@@ -1,4 +1,4 @@
-name: RadKernel Whyred CI
+name: Build RadKernel Whyred
 
 on:
   workflow_dispatch:
@@ -20,15 +20,15 @@ jobs:
       run: |
         git clone --depth=1 https://github.com/theradcolor/android_kernel_xiaomi_whyred.git kernel
 
-    - name: ⬇️ Clone Clang (Proton - terbaru)
+    - name: ⬇️ Clone Proton Clang (kdrag0n - Clang 13)
       run: |
-        git clone --depth=1 https://github.com/ZyCromerZ/proton-clang clang
+        git clone --depth=1 https://github.com/kdrag0n/proton-clang clang
 
-    - name: ⬇️ Clone ARM32 GCC Toolchain (AOSP)
+    - name: ⬇️ Clone ARM32 GCC Toolchain (AOSP 4.9)
       run: |
         git clone --depth=1 https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9 arm32
 
-    - name: ⚙️ Configure Environment Variables
+    - name: ⚙️ Set Build Environment
       run: |
         echo "ARCH=arm64" >> $GITHUB_ENV
         echo "SUBARCH=arm64" >> $GITHUB_ENV
@@ -37,16 +37,13 @@ jobs:
         echo "KBUILD_JOBS=$(nproc)" >> $GITHUB_ENV
         echo "COMPILER_PATH=$GITHUB_WORKSPACE/clang" >> $GITHUB_ENV
 
-    - name: 🔧 Kernel Config & Feature Patch
+    - name: 🔧 Configure Kernel (Enable DRM, NS)
       run: |
         cd kernel
         export ARCH=arm64
-        export SUBARCH=arm64
         export O=out
-
         make O=$O whyred_defconfig
 
-        # Tambahan fitur: DRM, NS, KMS
         scripts/config --file $O/.config \
           -e CONFIG_USER_NS \
           -e CONFIG_PID_NS \
@@ -64,21 +61,20 @@ jobs:
 
         make O=$O olddefconfig
 
-    - name: 🏗️ Build Kernel
+    - name: 🏗️ Build Kernel with Clang (use system linker)
       run: |
         cd kernel
         export ARCH=arm64
         export SUBARCH=arm64
         export O=out
         export PATH=$GITHUB_WORKSPACE/clang/bin:$PATH
-
         export CROSS_COMPILE=aarch64-linux-gnu-
         export CROSS_COMPILE_ARM32=$GITHUB_WORKSPACE/arm32/bin/arm-linux-androideabi-
 
         make -j$(nproc) O=$O \
           CC=clang \
           HOSTCC=clang \
-          KCFLAGS="-fuse-ld=lld" \
+          KCFLAGS="-fuse-ld=bfd" \
           AR=llvm-ar \
           NM=llvm-nm \
           OBJCOPY=llvm-objcopy \
@@ -87,7 +83,7 @@ jobs:
           READELF=llvm-readelf \
           HOSTAR=llvm-ar
 
-    - name: 📦 Pack into Flashable ZIP
+    - name: 📦 Create Flashable ZIP
       run: |
         cd kernel
         git clone --depth=1 https://github.com/osm0sis/AnyKernel3
@@ -104,6 +100,6 @@ jobs:
     - name: ⬆️ Upload Flashable ZIP
       uses: actions/upload-artifact@v4
       with:
-        name: Flashable-RadKernel
+        name: RadKernel-ZIP
         path: kernel/Whyred-RadKernel.zip
         
