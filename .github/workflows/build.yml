@@ -8,32 +8,30 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Install Dependencies
+    - name: 🔧 Instal dependensi dasar
       run: |
         sudo apt-get update
-        sudo apt-get install -y git ccache automake flex lzop bison \
-          build-essential zip curl make libssl-dev bc libc6 unzip \
-          libncurses5-dev libelf-dev
+        sudo apt-get install -y \
+          git ccache automake flex lzop bison \
+          build-essential zip curl make libssl-dev bc \
+          libc6 unzip libncurses5-dev libelf-dev
 
-    - name: Clone Kernel Source (RadKernel)
+    - name: 📦 Clone Kernel RadKernel Whyred
       run: |
         git clone --depth=1 https://github.com/theradcolor/android_kernel_xiaomi_whyred.git kernel
 
-    - name: Download AOSP Clang (r487747c)
+    - name: ⬇️ Download Clang AOSP r547379 (Stabil)
       run: |
         wget -qO clang.tar.gz \
-          https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/r487747c/clang-r487747c.tar.gz || \
-        wget -qO clang.tar.gz \
-          https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/master/clang-r487747c.tar.gz
-        tar xzf clang.tar.gz
-        mv clang-r487747c clang
+          "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r547379.tar.gz"
+        mkdir clang && tar -xf clang.tar.gz -C clang
 
-    - name: Clone ARM32 GCC Toolchain (AOSP 4.9)
+    - name: ⬇️ Clone Toolchain ARM32 (GCC AOSP 4.9)
       run: |
         git clone --depth=1 \
           https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9 arm32
 
-    - name: Set Build Env
+    - name: ⚙️ Siapkan environment build
       run: |
         echo "ARCH=arm64" >> $GITHUB_ENV
         echo "SUBARCH=arm64" >> $GITHUB_ENV
@@ -41,11 +39,12 @@ jobs:
         echo "KBUILD_BUILD_HOST=radkernel" >> $GITHUB_ENV
         echo "KBUILD_JOBS=$(nproc)" >> $GITHUB_ENV
 
-    - name: Configure Kernel & Enable Features
+    - name: 🔧 Konfigurasi kernel + aktifkan fitur tambahan
       run: |
         cd kernel
         export ARCH=arm64 O=out
         make O=$O whyred_defconfig
+
         scripts/config --file $O/.config \
           -e CONFIG_USER_NS \
           -e CONFIG_PID_NS \
@@ -60,24 +59,25 @@ jobs:
           -e CONFIG_FB \
           -e CONFIG_FB_SIMPLE \
           -e CONFIG_DRM_PANEL_SIMPLE
+
         make O=$O olddefconfig
 
-    - name: Build Kernel with Clang AOSP
+    - name: 🛠️ Build kernel dengan Clang
       run: |
         cd kernel
         export ARCH=arm64 SUBARCH=arm64 O=out
         export PATH=$GITHUB_WORKSPACE/clang/bin:$PATH
         export CROSS_COMPILE=aarch64-linux-gnu-
         export CROSS_COMPILE_ARM32=$GITHUB_WORKSPACE/arm32/bin/arm-linux-androideabi-
+
         make -j$(nproc) O=$O \
-          CC=clang \
-          HOSTCC=clang \
+          CC=clang HOSTCC=clang \
           AR=llvm-ar NM=llvm-nm \
           OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump \
           STRIP=llvm-strip READELF=llvm-readelf \
           HOSTAR=llvm-ar
 
-    - name: Pack Flashable ZIP
+    - name: 📦 Buat ZIP flashable AnyKernel3
       run: |
         cd kernel
         git clone --depth=1 https://github.com/osm0sis/AnyKernel3
@@ -85,13 +85,13 @@ jobs:
         cd AnyKernel3
         zip -r9 ../Whyred-RadKernel.zip *
 
-    - name: Upload Image.gz-dtb
+    - name: ⬆️ Upload Image.gz-dtb
       uses: actions/upload-artifact@v4
       with:
         name: Image.gz-dtb
         path: kernel/out/arch/arm64/boot/Image.gz-dtb
 
-    - name: Upload Flashable ZIP
+    - name: ⬆️ Upload Flashable ZIP
       uses: actions/upload-artifact@v4
       with:
         name: RadKernel-ZIP
