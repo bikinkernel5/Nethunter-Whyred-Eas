@@ -29,11 +29,11 @@ jobs:
         git clone --depth=1 \
           https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9 arm32
 
-    - name: Apply kernel patches for Clang compatibility
+    - name: Patch kernel source (Clang compatibility)
       run: |
         cd kernel
 
-        # Patch 'register sp' → inline function
+        # Fix register sp
         sed -i '/register unsigned long current_stack_pointer asm ("sp");/c\
 static inline unsigned long current_stack_pointer(void) {\
     unsigned long sp;\
@@ -41,7 +41,7 @@ static inline unsigned long current_stack_pointer(void) {\
     return sp;\
 }' arch/arm64/include/asm/stack_pointer.h
 
-        # Patch spinlock constraint
+        # Fix spinlock constraint
         sed -i 's/"I" (1 << TICKET_SHIFT)/"n" (1 << TICKET_SHIFT)/' arch/arm64/include/asm/spinlock.h
 
     - name: Set environment variables
@@ -52,7 +52,7 @@ static inline unsigned long current_stack_pointer(void) {\
         echo "KBUILD_BUILD_HOST=github" >> $GITHUB_ENV
         echo "KBUILD_JOBS=$(nproc)" >> $GITHUB_ENV
 
-    - name: Configure kernel with DRM and namespaces
+    - name: Configure kernel and enable features
       run: |
         cd kernel
         export ARCH=arm64
@@ -87,6 +87,7 @@ static inline unsigned long current_stack_pointer(void) {\
         export LLVM_IAS=1
         export CROSS_COMPILE_ARM32=$GITHUB_WORKSPACE/arm32/bin/arm-linux-androideabi-
 
+        # Fix for .relr.dyn error
         rm -f $GITHUB_WORKSPACE/clang/bin/ld
 
         make -j$(nproc) O=$O \
@@ -97,7 +98,7 @@ static inline unsigned long current_stack_pointer(void) {\
           STRIP=llvm-strip READELF=llvm-readelf \
           HOSTAR=llvm-ar
 
-    - name: Pack kernel into flashable ZIP
+    - name: Pack kernel into ZIP with AnyKernel3
       run: |
         cd kernel
         git clone --depth=1 https://github.com/osm0sis/AnyKernel3
