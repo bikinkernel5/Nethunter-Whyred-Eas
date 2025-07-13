@@ -20,10 +20,11 @@ jobs:
       run: |
         git clone --depth=1 https://github.com/theradcolor/android_kernel_xiaomi_whyred.git kernel
 
-    - name: ⬇️ Download AOSP Clang (r487747c)
+    - name: ⬇️ Download Clang 17 from KernelSU (Stable Mirror)
       run: |
-        mkdir clang && cd clang
-        wget -q https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/master/clang-r487747c.tar.gz -O - | tar -xz
+        wget https://github.com/tiann/KernelSU/releases/download/clang%2Bllvm-17.0.2-release/clang+llvm-17.0.2-x86_64-linux-gnu.tar.xz
+        tar -xf clang+llvm-17.0.2-x86_64-linux-gnu.tar.xz
+        mv clang+llvm-17.0.2-x86_64-linux-gnu clang
 
     - name: ⬇️ Clone ARM32 GCC Toolchain (AOSP 4.9)
       run: |
@@ -62,7 +63,7 @@ jobs:
 
         make O=$O olddefconfig
 
-    - name: 🏗️ Build Kernel with AOSP Clang
+    - name: 🏗️ Build Kernel with Clang 17
       run: |
         cd kernel
         export ARCH=arm64
