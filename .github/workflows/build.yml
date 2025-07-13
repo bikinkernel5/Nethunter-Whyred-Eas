@@ -33,15 +33,21 @@ jobs:
       run: |
         cd kernel
 
-        # Patch stack_pointer.h (remove register sp)
-        sed -i '/register unsigned long current_stack_pointer/d' arch/arm64/include/asm/stack_pointer.h
-        echo 'static inline unsigned long current_stack_pointer(void) {' >> arch/arm64/include/asm/stack_pointer.h
-        echo '    unsigned long sp;' >> arch/arm64/include/asm/stack_pointer.h
-        echo '    asm("mov %0, sp" : "=r"(sp));' >> arch/arm64/include/asm/stack_pointer.h
-        echo '    return sp;' >> arch/arm64/include/asm/stack_pointer.h
-        echo '}' >> arch/arm64/include/asm/stack_pointer.h
+        # ✅ Ganti seluruh isi stack_pointer.h dengan versi Clang-safe
+        cat > arch/arm64/include/asm/stack_pointer.h << 'EOF'
+#ifndef __ASM_STACK_POINTER_H
+#define __ASM_STACK_POINTER_H
 
-        # Patch spinlock.h (change constraint 'I' to 'n')
+static inline unsigned long current_stack_pointer(void) {
+    unsigned long sp;
+    asm("mov %0, sp" : "=r"(sp));
+    return sp;
+}
+
+#endif /* __ASM_STACK_POINTER_H */
+EOF
+
+        # ✅ Fix constraint literal yang error di Clang
         sed -i 's/"I" (1 << TICKET_SHIFT)/"n" (1 << TICKET_SHIFT)/' arch/arm64/include/asm/spinlock.h
 
     - name: ⚙️ Set Environment Variables
@@ -86,7 +92,7 @@ jobs:
         export LLVM_IAS=1
         export CROSS_COMPILE_ARM32=$GITHUB_WORKSPACE/arm32/bin/arm-linux-androideabi-
 
-        # Hindari bug .relr.dyn
+        # 🧨 Hindari linker error: hapus clang/bin/ld
         rm -f $GITHUB_WORKSPACE/clang/bin/ld
 
         make -j$(nproc) O=$O \
