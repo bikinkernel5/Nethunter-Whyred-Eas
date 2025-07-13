@@ -8,14 +8,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: 🔧 Install dependencies + binutils terbaru
+    - name: 🔧 Install dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y \
           git ccache automake flex lzop bison \
           build-essential zip curl make libssl-dev bc \
-          libc6 unzip libncurses5-dev libelf-dev \
-          binutils
+          libc6 unzip libncurses5-dev libelf-dev binutils
 
     - name: 📦 Clone Kernel Source (RadKernel)
       run: |
@@ -61,7 +60,7 @@ jobs:
 
         make O=$O olddefconfig
 
-    - name: 🛠️ Build Kernel with Clang (pakai system linker)
+    - name: 🛠️ Build Kernel with Clang (Final .relr.dyn Fix)
       run: |
         cd kernel
         export ARCH=arm64
@@ -71,11 +70,13 @@ jobs:
         export LLVM=1
         export LLVM_IAS=1
         export CROSS_COMPILE_ARM32=$GITHUB_WORKSPACE/arm32/bin/arm-linux-androideabi-
-        export LD=/usr/bin/ld
-        export LDFLAGS="-fuse-ld=bfd"
+
+        # Hapus linker clang internal yang rusak
+        rm -f $GITHUB_WORKSPACE/clang/bin/ld
 
         make -j$(nproc) O=$O \
-          CC=clang HOSTCC=clang LD=$LD LDFLAGS="$LDFLAGS" \
+          CC=clang HOSTCC=clang \
+          LD=ld.lld \
           AR=llvm-ar NM=llvm-nm \
           OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump \
           STRIP=llvm-strip READELF=llvm-readelf \
