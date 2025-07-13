@@ -16,7 +16,8 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y \
           bc bison flex libssl-dev libncurses5-dev build-essential ccache \
-          libelf-dev libudev-dev lzop curl wget zip git
+          libelf-dev libudev-dev lzop curl wget zip git \
+          gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf
 
     - name: Clone Proton Clang
       run: git clone --depth=1 https://github.com/kdrag0n/proton-clang.git clang
@@ -30,7 +31,7 @@ jobs:
         export O=out
         make O=$O ARCH=$ARCH whyred_defconfig
 
-        # Enable key kernel features
+        # Tambahkan fitur penting
         scripts/config --file $O/.config -e CONFIG_USER_NS
         scripts/config --file $O/.config -e CONFIG_NAMESPACES
         scripts/config --file $O/.config -e CONFIG_UIDGID_STRICT_TYPE_CHECKS
@@ -45,14 +46,20 @@ jobs:
         scripts/config --file $O/.config -e CONFIG_CGROUPS
         scripts/config --file $O/.config -e CONFIG_IPC_NS
         scripts/config --file $O/.config -e CONFIG_FB
+
         make O=$O ARCH=$ARCH olddefconfig
 
-    - name: Build Kernel
+    - name: Build Host Tools (fixdep etc)
+      run: |
+        export ARCH=arm64
+        export O=out
+        make O=$O ARCH=$ARCH HOSTCC=gcc scripts
+
+    - name: Build Kernel with Proton Clang
       run: |
         export ARCH=arm64
         export O=out
         export PATH=$GITHUB_WORKSPACE/clang/bin:$GITHUB_WORKSPACE/arm32/bin:$PATH
-
         export CROSS_COMPILE=aarch64-linux-gnu-
         export CROSS_COMPILE_ARM32=arm-linux-androideabi-
         export CLANG_TRIPLE=aarch64-linux-gnu-
