@@ -16,14 +16,13 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y \
           bc bison flex libssl-dev libncurses5-dev build-essential ccache \
-          libelf-dev libudev-dev lzop curl wget zip git \
-          python3
+          libelf-dev libudev-dev lzop curl wget zip git python3
 
-    - name: ⚙️ Clone Proton Clang
+    - name: ⚙️ Clone Proton Clang (Compiler)
       run: |
         git clone --depth=1 https://github.com/kdrag0n/proton-clang.git clang
 
-    - name: 🔧 Clone ARM32 Toolchain (AOSP)
+    - name: 🔧 Clone ARM32 Toolchain (AOSP 4.9)
       run: |
         git clone --depth=1 https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9 arm32
 
@@ -66,7 +65,6 @@ jobs:
         make -j$(nproc) O=$O ARCH=$ARCH \
           CC=clang \
           HOSTCC=clang \
-          LD=ld.lld \
           AR=llvm-ar \
           NM=llvm-nm \
           OBJCOPY=llvm-objcopy \
