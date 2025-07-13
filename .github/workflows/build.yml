@@ -1,4 +1,4 @@
-name: Build RadKernel Whyred
+name: Build Nethunter Kernel Whyred (Clang Compatible)
 
 on:
   workflow_dispatch:
@@ -16,9 +16,9 @@ jobs:
           build-essential zip curl make libssl-dev bc \
           libc6 unzip libncurses5-dev libelf-dev binutils
 
-    - name: 📦 Clone Kernel Source (RadKernel)
+    - name: 📦 Clone Kernel Source (Team-420)
       run: |
-        git clone --depth=1 https://github.com/theradcolor/android_kernel_xiaomi_whyred.git kernel
+        git clone --depth=1 https://github.com/Team-420/Nethunter-Whyred-Eas kernel
 
     - name: ⬇️ Clone Proton Clang (kdrag0n)
       run: |
@@ -29,12 +29,27 @@ jobs:
         git clone --depth=1 \
           https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9 arm32
 
+    - name: 🩹 Patch kernel source (fix Clang incompatibilities)
+      run: |
+        cd kernel
+
+        # Patch stack_pointer.h (remove register sp)
+        sed -i '/register unsigned long current_stack_pointer/d' arch/arm64/include/asm/stack_pointer.h
+        echo 'static inline unsigned long current_stack_pointer(void) {' >> arch/arm64/include/asm/stack_pointer.h
+        echo '    unsigned long sp;' >> arch/arm64/include/asm/stack_pointer.h
+        echo '    asm("mov %0, sp" : "=r"(sp));' >> arch/arm64/include/asm/stack_pointer.h
+        echo '    return sp;' >> arch/arm64/include/asm/stack_pointer.h
+        echo '}' >> arch/arm64/include/asm/stack_pointer.h
+
+        # Patch spinlock.h (change constraint 'I' to 'n')
+        sed -i 's/"I" (1 << TICKET_SHIFT)/"n" (1 << TICKET_SHIFT)/' arch/arm64/include/asm/spinlock.h
+
     - name: ⚙️ Set Environment Variables
       run: |
         echo "ARCH=arm64" >> $GITHUB_ENV
         echo "SUBARCH=arm64" >> $GITHUB_ENV
-        echo "KBUILD_BUILD_USER=theradcolor" >> $GITHUB_ENV
-        echo "KBUILD_BUILD_HOST=radkernel" >> $GITHUB_ENV
+        echo "KBUILD_BUILD_USER=nethunter" >> $GITHUB_ENV
+        echo "KBUILD_BUILD_HOST=github" >> $GITHUB_ENV
         echo "KBUILD_JOBS=$(nproc)" >> $GITHUB_ENV
 
     - name: 🔧 Konfigurasi Kernel & Aktifkan Fitur Tambahan
@@ -60,7 +75,7 @@ jobs:
 
         make O=$O olddefconfig
 
-    - name: 🛠️ Build Kernel with Clang (Final .relr.dyn Fix)
+    - name: 🛠️ Build Kernel with Clang (Final Fix)
       run: |
         cd kernel
         export ARCH=arm64
@@ -71,7 +86,7 @@ jobs:
         export LLVM_IAS=1
         export CROSS_COMPILE_ARM32=$GITHUB_WORKSPACE/arm32/bin/arm-linux-androideabi-
 
-        # Hapus linker clang internal yang rusak
+        # Hindari bug .relr.dyn
         rm -f $GITHUB_WORKSPACE/clang/bin/ld
 
         make -j$(nproc) O=$O \
@@ -88,7 +103,7 @@ jobs:
         git clone --depth=1 https://github.com/osm0sis/AnyKernel3
         cp out/arch/arm64/boot/Image.gz-dtb AnyKernel3/
         cd AnyKernel3
-        zip -r9 ../Whyred-RadKernel.zip *
+        zip -r9 ../Whyred-NHKernel.zip *
 
     - name: ⬆️ Upload Kernel Image
       uses: actions/upload-artifact@v4
@@ -99,5 +114,5 @@ jobs:
     - name: ⬆️ Upload Flashable ZIP
       uses: actions/upload-artifact@v4
       with:
-        name: RadKernel-ZIP
-        path: kernel/Whyred-RadKernel.zip
+        name: Kernel-ZIP
+        path: kernel/Whyred-NHKernel.zip
