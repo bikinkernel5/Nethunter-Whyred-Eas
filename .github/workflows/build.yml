@@ -20,9 +20,10 @@ jobs:
       run: |
         git clone --depth=1 https://github.com/theradcolor/android_kernel_xiaomi_whyred.git kernel
 
-    - name: ⬇️ Clone Proton Clang (kdrag0n - Clang 13)
+    - name: ⬇️ Download AOSP Clang (r487747c)
       run: |
-        git clone --depth=1 https://github.com/kdrag0n/proton-clang clang
+        mkdir clang && cd clang
+        wget -q https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/master/clang-r487747c.tar.gz -O - | tar -xz
 
     - name: ⬇️ Clone ARM32 GCC Toolchain (AOSP 4.9)
       run: |
@@ -61,7 +62,7 @@ jobs:
 
         make O=$O olddefconfig
 
-    - name: 🏗️ Build Kernel with Clang (use system linker)
+    - name: 🏗️ Build Kernel with AOSP Clang
       run: |
         cd kernel
         export ARCH=arm64
@@ -74,7 +75,6 @@ jobs:
         make -j$(nproc) O=$O \
           CC=clang \
           HOSTCC=clang \
-          KCFLAGS="-fuse-ld=bfd" \
           AR=llvm-ar \
           NM=llvm-nm \
           OBJCOPY=llvm-objcopy \
@@ -102,3 +102,4 @@ jobs:
       with:
         name: RadKernel-ZIP
         path: kernel/Whyred-RadKernel.zip
+        
