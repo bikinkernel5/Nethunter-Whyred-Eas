@@ -1,7 +1,7 @@
 name: Build Nethunter Kernel Whyred (Clang Compatible)
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch: 
 
 jobs:
   build:
