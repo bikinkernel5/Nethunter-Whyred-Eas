@@ -20,11 +20,9 @@ jobs:
       run: |
         git clone --depth=1 https://github.com/theradcolor/android_kernel_xiaomi_whyred.git kernel
 
-    - name: ⬇️ Download Clang AOSP r547379
+    - name: ⬇️ Clone Proton Clang 11 (Kompatibel)
       run: |
-        wget -qO clang.tar.gz \
-          "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r547379.tar.gz"
-        mkdir clang && tar -xf clang.tar.gz -C clang
+        git clone --depth=1 -b clang-11 https://github.com/ZyCromerZ/proton-clang.git clang
 
     - name: ⬇️ Clone ARM32 GCC Toolchain (AOSP 4.9)
       run: |
@@ -62,19 +60,20 @@ jobs:
 
         make O=$O olddefconfig
 
-    - name: 🛠️ Build Kernel with Clang (Final Fix)
+    - name: 🛠️ Build Kernel with Proton Clang 11
       run: |
         cd kernel
         export ARCH=arm64
         export SUBARCH=arm64
         export O=out
         export PATH=$GITHUB_WORKSPACE/clang/bin:$PATH
-        export LLVM=1
-        export LLVM_IAS=1
         export CROSS_COMPILE_ARM32=$GITHUB_WORKSPACE/arm32/bin/arm-linux-androideabi-
+        export CLANG_TRIPLE=aarch64-linux-gnu-
 
         make -j$(nproc) O=$O \
-          CC=clang HOSTCC=clang \
+          CC=clang \
+          HOSTCC=clang \
+          LD=ld.lld \
           AR=llvm-ar NM=llvm-nm \
           OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump \
           STRIP=llvm-strip READELF=llvm-readelf \
