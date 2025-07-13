@@ -21,7 +21,7 @@ jobs:
     - name: Clone Proton Clang
       run: git clone --depth=1 https://github.com/kdrag0n/proton-clang.git clang
 
-    - name: Clone Android ARM32 Toolchain
+    - name: Clone ARM32 Android Toolchain
       run: git clone --depth=1 https://github.com/arter97/arm32-gcc.git arm32
 
     - name: Configure Kernel
@@ -30,7 +30,7 @@ jobs:
         export O=out
         make O=$O ARCH=$ARCH whyred_defconfig
 
-        # Aktifkan fitur penting
+        # Enable key kernel features
         scripts/config --file $O/.config -e CONFIG_USER_NS
         scripts/config --file $O/.config -e CONFIG_NAMESPACES
         scripts/config --file $O/.config -e CONFIG_UIDGID_STRICT_TYPE_CHECKS
@@ -60,7 +60,7 @@ jobs:
         make -j$(nproc) O=$O ARCH=$ARCH \
           CC=clang \
           HOSTCC=gcc \
-          LD=ld.lld \
+          LD=ld \
           AR=llvm-ar \
           NM=llvm-nm \
           OBJCOPY=llvm-objcopy \
@@ -87,3 +87,15 @@ jobs:
       with:
         name: Kernel-ZIP
         path: Whyred-Kernel.zip
+
+    - name: Upload Kernel Config
+      run: |
+        cp out/.config config.gz
+        gzip -f config.gz
+      continue-on-error: true
+
+    - name: Upload Kernel Config Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Kernel-Config
+        path: config.gz
