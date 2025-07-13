@@ -52,7 +52,7 @@ jobs:
 
         make O=$O ARCH=$ARCH olddefconfig
 
-    - name: 🏗️ Build Kernel with Clang
+    - name: 🏗️ Build Kernel with Clang (use system linker)
       run: |
         export ARCH=arm64
         export SUBARCH=arm64
@@ -65,6 +65,7 @@ jobs:
         make -j$(nproc) O=$O ARCH=$ARCH \
           CC=clang \
           HOSTCC=clang \
+          KCFLAGS="-fuse-ld=bfd" \
           AR=llvm-ar \
           NM=llvm-nm \
           OBJCOPY=llvm-objcopy \
