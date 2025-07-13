@@ -1,4 +1,4 @@
-name: Build Whyred Kernel
+name: Build Whyred Kernel with DRM & Namespaces
 
 on:
   workflow_dispatch:
@@ -8,43 +8,55 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Kernel Source
+    - name: 🧬 Checkout Kernel Source
       uses: actions/checkout@v4
 
-    - name: Install Dependencies
+    - name: 📦 Install Dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y \
           bc bison flex libssl-dev libncurses5-dev build-essential ccache \
-          libelf-dev libudev-dev lzop curl wget zip git
+          libelf-dev libudev-dev lzop curl wget zip git \
+          python3
 
-    - name: Clone Proton Clang
+    - name: ⚙️ Clone Proton Clang
       run: |
         git clone --depth=1 https://github.com/kdrag0n/proton-clang.git clang
 
-    - name: Clone ARM32 Toolchain (AOSP)
+    - name: 🔧 Clone ARM32 Toolchain (AOSP)
       run: |
         git clone --depth=1 https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9 arm32
 
-    - name: Configure Kernel
+    - name: 🧱 Configure Kernel (Enable DRM/KMS & Namespaces)
       run: |
         export ARCH=arm64
+        export SUBARCH=arm64
         export O=out
 
         make O=$O ARCH=$ARCH whyred_defconfig
 
-        # Aktifkan fitur tambahan (userns, drm, dll)
-        scripts/config --file $O/.config -e CONFIG_USER_NS
-        scripts/config --file $O/.config -e CONFIG_NAMESPACES
-        scripts/config --file $O/.config -e CONFIG_UIDGID_STRICT_TYPE_CHECKS
-        scripts/config --file $O/.config -e CONFIG_DRM
-        scripts/config --file $O/.config -e CONFIG_DRM_MSM
+        # Tambahan config: DRM, KMS, Namespaces
+        scripts/config --file $O/.config \
+          -e CONFIG_USER_NS \
+          -e CONFIG_PID_NS \
+          -e CONFIG_NET_NS \
+          -e CONFIG_UTS_NS \
+          -e CONFIG_IPC_NS \
+          -e CONFIG_NAMESPACES \
+          -e CONFIG_UIDGID_STRICT_TYPE_CHECKS \
+          -e CONFIG_DRM \
+          -e CONFIG_DRM_MSM \
+          -e CONFIG_DRM_KMS_HELPER \
+          -e CONFIG_FB \
+          -e CONFIG_FB_SIMPLE \
+          -e CONFIG_DRM_PANEL_SIMPLE
 
         make O=$O ARCH=$ARCH olddefconfig
 
-    - name: Build Kernel with Proton Clang
+    - name: 🏗️ Build Kernel with Clang
       run: |
         export ARCH=arm64
+        export SUBARCH=arm64
         export O=out
         export PATH=$GITHUB_WORKSPACE/clang/bin:$PATH
 
@@ -53,7 +65,7 @@ jobs:
 
         make -j$(nproc) O=$O ARCH=$ARCH \
           CC=clang \
-          HOSTCC=gcc \
+          HOSTCC=clang \
           LD=ld.lld \
           AR=llvm-ar \
           NM=llvm-nm \
@@ -63,21 +75,22 @@ jobs:
           READELF=llvm-readelf \
           HOSTAR=llvm-ar
 
-    - name: Clone AnyKernel3 & Pack ZIP
+    - name: 📦 Clone AnyKernel3 & Pack Flashable ZIP
       run: |
         git clone --depth=1 https://github.com/osm0sis/AnyKernel3
         cp out/arch/arm64/boot/Image.gz-dtb AnyKernel3/
         cd AnyKernel3
         zip -r9 ../Whyred-Kernel.zip *
 
-    - name: Upload Image.gz-dtb
+    - name: ⬆️ Upload Kernel Image
       uses: actions/upload-artifact@v4
       with:
         name: Image.gz-dtb
         path: out/arch/arm64/boot/Image.gz-dtb
 
-    - name: Upload Flashable ZIP
+    - name: ⬆️ Upload Flashable ZIP
       uses: actions/upload-artifact@v4
       with:
         name: Kernel-ZIP
         path: Whyred-Kernel.zip
+        
